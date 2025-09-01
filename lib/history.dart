@@ -28,7 +28,11 @@ class _HistoryPageState extends State<HistoryPage> {
     if (entries.isEmpty) {
       return Center(child: Text('No notes yet.'));
     }
-
+    if (_tagFilters.isNotEmpty) {
+      entries = entries
+          .where((m) => _tagFilters.any((element) => m.tags.contains(element)))
+          .toList();
+    }
     return ListView(
       children: [
         Padding(
@@ -90,15 +94,6 @@ class _HistoryPageState extends State<HistoryPage> {
                             _tagFilters.add(tag);
                           } else {
                             _tagFilters.remove(tag);
-                          }
-                          if (_tagFilters.isNotEmpty) {
-                            entries = entries
-                                .where(
-                                  (m) => _tagFilters.any(
-                                    (element) => m.tags.contains(element),
-                                  ),
-                                )
-                                .toList();
                           }
                         });
                       },

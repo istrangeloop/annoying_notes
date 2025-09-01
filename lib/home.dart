@@ -6,35 +6,39 @@ import 'package:witchy_diary/appstate.dart';
 import 'package:witchy_diary/datetime_selector.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  const HomePage({super.key, Entry? entry});
+
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
-  final TextEditingController _myController = TextEditingController();
-  final TextEditingController _textEditingController = TextEditingController();
+  final TextEditingController _noteBodyController = TextEditingController();
+  final TextEditingController _tagsController = TextEditingController();
 
   DateTime selectedDate = DateTime(0);
   List<String> _tags = [];
 
   @override
   void dispose() {
-    _myController.dispose();
-    _textEditingController
-        .dispose(); // Dispose the controller when no longer needed
+    _noteBodyController.dispose();
+    _tagsController.dispose();
     super.dispose();
   }
 
   void resetState() {
-    _myController.text = "";
-    setState(() => selectedDate = DateTime(0));
+    _noteBodyController.text = "";
+    _tagsController.text = "";
+    setState(() {
+      selectedDate = DateTime(0);
+      _tags = [];
+    });
   }
 
   void _addTag(String tag) {
     setState(() {
       _tags.add(tag.trim());
-      _textEditingController.clear();
+      _tagsController.clear();
     });
   }
 
@@ -58,15 +62,14 @@ class _HomePageState extends State<HomePage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-          const Text('Where the witches at? >:3'),
           TextField(
-            controller: _myController,
+            controller: _noteBodyController,
             minLines: 6,
             maxLines: null,
             keyboardType: TextInputType.multiline,
             decoration: InputDecoration(
               alignLabelWithHint: true,
-              labelText: "write a spell, dream or ritual",
+              labelText: "write a note",
               border: OutlineInputBorder(),
             ),
           ),
@@ -95,14 +98,14 @@ class _HomePageState extends State<HomePage> {
           Column(
             children: [
               TextField(
-                controller: _textEditingController,
+                controller: _tagsController,
                 decoration: InputDecoration(
                   labelText: 'Add a tag',
                   suffixIcon: IconButton(
                     icon: Icon(Icons.add),
                     onPressed: () {
-                      if (_textEditingController.text.isNotEmpty) {
-                        _addTag(_textEditingController.text);
+                      if (_tagsController.text.isNotEmpty) {
+                        _addTag(_tagsController.text);
                       }
                     },
                   ),
@@ -129,9 +132,14 @@ class _HomePageState extends State<HomePage> {
               ElevatedButton(
                 onPressed: () {
                   if (selectedDate != DateTime(0)) {
-                    appState.saveEntry(_myController.text, selectedDate, _tags);
+                    appState.saveEntry(
+                      _noteBodyController.text,
+                      selectedDate,
+                      _tags,
+                    );
                   } else {
-                    appState.saveEntry(_myController.text, now, _tags);
+                    appState.saveEntry(_noteBodyController.text, now, _tags);
+                    appState.saveTags(_tags);
                   }
                   resetState();
                 },
