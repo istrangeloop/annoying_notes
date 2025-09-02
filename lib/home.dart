@@ -6,7 +6,9 @@ import 'package:witchy_diary/appstate.dart';
 import 'package:witchy_diary/datetime_selector.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key, Entry? entry});
+  final Entry entry;
+
+  const HomePage({super.key, required this.entry});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -16,8 +18,10 @@ class _HomePageState extends State<HomePage> {
   final TextEditingController _noteBodyController = TextEditingController();
   final TextEditingController _tagsController = TextEditingController();
 
+  //TODO: note editing if entry is provided
   DateTime selectedDate = DateTime(0);
   List<String> _tags = [];
+  List<String> _newTags = [];
 
   @override
   void dispose() {
@@ -30,14 +34,21 @@ class _HomePageState extends State<HomePage> {
     _noteBodyController.text = "";
     _tagsController.text = "";
     setState(() {
-      selectedDate = DateTime(0);
-      _tags = [];
+      _noteBodyController.text = widget.entry.text;
+      selectedDate = widget.entry.date;
+      _tags = widget.entry.tags;
     });
   }
 
   void _addTag(String tag) {
     setState(() {
       _tags.add(tag.trim());
+    });
+  }
+
+  void _addNewTag(String tag) {
+    setState(() {
+      _newTags.add(tag.trim());
       _tagsController.clear();
     });
   }
@@ -48,29 +59,39 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  void _removeNewTag(String tag) {
+    setState(() {
+      _newTags.remove(tag);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     var appState = context.watch<MyAppState>();
+
     DateTime now = DateTime.now();
 
-    String formattedDate = DateFormat('kk:mm:ss - EEE d MMM').format(now);
+    String formattedDate = DateFormat('kk:mm - EEE d MMM').format(now);
     String formattedSelectedDate = DateFormat(
-      'kk:mm:ss - EEE d MMM',
+      'kk:mm - EEE d MMM',
     ).format(selectedDate);
 
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-          TextField(
-            controller: _noteBodyController,
-            minLines: 6,
-            maxLines: null,
-            keyboardType: TextInputType.multiline,
-            decoration: InputDecoration(
-              alignLabelWithHint: true,
-              labelText: "write a note",
-              border: OutlineInputBorder(),
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: TextField(
+              controller: _noteBodyController,
+              minLines: 6,
+              maxLines: null,
+              keyboardType: TextInputType.multiline,
+              decoration: InputDecoration(
+                alignLabelWithHint: true,
+                labelText: "write a note",
+                border: OutlineInputBorder(),
+              ),
             ),
           ),
           Text(
@@ -85,45 +106,79 @@ class _HomePageState extends State<HomePage> {
             },
             child: Text('Select another?'),
           ),
+          // TODO: reminders and alarm logic
+          // checkbox and spaced repetition
           if (selectedDate.isAfter(DateTime.now())) ...[
-            Row(
+            Column(
               children: [
-                Text("Set reminder?"),
+                Text("This date is in the future. Set reminder?"),
+                Text("5 minutes before"),
                 Text("30 minutes before"),
+                Text("custom"),
                 Text("Notification"),
                 Text("Alarm"),
+                Text("+ add another"),
               ],
             ),
           ],
           Column(
             children: [
-              TextField(
-                controller: _tagsController,
-                decoration: InputDecoration(
-                  labelText: 'Add a tag',
-                  suffixIcon: IconButton(
-                    icon: Icon(Icons.add),
-                    onPressed: () {
-                      if (_tagsController.text.isNotEmpty) {
-                        _addTag(_tagsController.text);
-                      }
-                    },
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: TextField(
+                  controller: _tagsController,
+                  decoration: InputDecoration(
+                    labelText: 'Add a tag',
+                    suffixIcon: IconButton(
+                      icon: Icon(Icons.add),
+                      onPressed: () {
+                        if (_tagsController.text.isNotEmpty) {
+                          _addTag(_tagsController.text);
+                          _addNewTag(_tagsController.text);
+                        }
+                      },
+                    ),
                   ),
+                  onSubmitted: (value) {
+                    if (value.isNotEmpty) {
+                      _addTag(value);
+                    }
+                  },
                 ),
-                onSubmitted: (value) {
-                  if (value.isNotEmpty) {
-                    _addTag(value);
-                  }
-                },
               ),
               Wrap(
                 spacing: 8.0,
-                children: _tags.map((tag) {
-                  return Chip(
-                    label: Text(tag),
-                    onDeleted: () => _removeTag(tag),
-                  );
-                }).toList(),
+                children:
+                    appState.allTags.map((tag) {
+                      return FilterChip(
+                        label: Text('#${tag.text}'),
+                        selected: _tags.contains(tag.text),
+                        onSelected: (bool selected) {
+                          setState(() {
+                            if (selected) {
+                              _addTag(tag.text);
+                            } else {
+                              _removeTag(tag.text);
+                            }
+                          });
+                        },
+                      );
+                    }).toList() +
+                    _newTags.map((tag) {
+                      return FilterChip(
+                        label: Text('#$tag'),
+                        selected: _tags.contains(tag),
+                        onSelected: (bool selected) {
+                          setState(() {
+                            if (!selected) {
+                              _removeTag(tag);
+                              _removeNewTag(tag);
+                            }
+                          });
+                        },
+                        onDeleted: () => {_removeTag(tag), _removeNewTag(tag)},
+                      );
+                    }).toList(),
               ),
             ],
           ),
@@ -139,7 +194,6 @@ class _HomePageState extends State<HomePage> {
                     );
                   } else {
                     appState.saveEntry(_noteBodyController.text, now, _tags);
-                    appState.saveTags(_tags);
                   }
                   resetState();
                 },

@@ -23,6 +23,7 @@ class MyApp extends StatelessWidget {
         title: 'Flutter Demo',
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+          appBarTheme: const AppBarTheme(backgroundColor: Colors.green),
         ),
         home: const AppWrapper(title: 'Flutter Demo Home Page'),
       ),
@@ -49,7 +50,7 @@ class _AppWrapperState extends State<AppWrapper> {
     Widget page;
     switch (selectedIndex) {
       case 0:
-        page = HomePage();
+        page = HomePage(entry: Entry("", DateTime(0), []));
       case 1:
         page = HistoryPage(filter: (m) => !m.isFuture());
       case 2:
