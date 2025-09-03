@@ -1,7 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-
+import 'package:flutter_quill/flutter_quill.dart';
 import 'package:witchy_diary/appstate.dart';
 import 'package:witchy_diary/home.dart';
 
@@ -125,7 +127,7 @@ class _HistoryPageState extends State<HistoryPage> {
               minWidth: 100,
               maxWidth: 200,
               minHeight: 50,
-              maxHeight: 150,
+              maxHeight: 350,
             ),
             margin: EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
             padding: const EdgeInsets.all(12.0),
@@ -143,8 +145,9 @@ class _HistoryPageState extends State<HistoryPage> {
                       icon: Icon(Icons.edit),
                       onPressed: () => Navigator.push(
                         context,
-                        MaterialPageRoute<void>(
-                          builder: (context) => HomePage(entry: entry),
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              HomePage(entry: entry, isEditing: true),
                         ),
                       ),
                     ),
@@ -155,7 +158,22 @@ class _HistoryPageState extends State<HistoryPage> {
                     ),
                   ],
                 ),
-                Text(entry.text, overflow: TextOverflow.ellipsis, maxLines: 5),
+                // TODO: fix size of quill editor in posts
+                SizedBox(
+                  height: 250.0,
+                  child: QuillEditor.basic(
+                    controller: QuillController(
+                      document: Document.fromJson(jsonDecode(entry.text)),
+                      selection: TextSelection.collapsed(offset: 0),
+                      readOnly: true,
+                    ),
+                    config: QuillEditorConfig(
+                      expands: true,
+                      showCursor: false,
+                      padding: const EdgeInsets.all(16),
+                    ),
+                  ),
+                ),
                 Wrap(
                   spacing: 8.0,
                   children: entry.tags.map((tag) {

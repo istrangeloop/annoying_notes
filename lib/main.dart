@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:convert';
+
 import 'package:witchy_diary/appstate.dart';
 import 'package:witchy_diary/home.dart';
 import 'package:witchy_diary/history.dart';
+import 'package:flutter_quill/flutter_quill.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 void main() {
   runApp(const MyApp());
@@ -25,6 +29,12 @@ class MyApp extends StatelessWidget {
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
           appBarTheme: const AppBarTheme(backgroundColor: Colors.green),
         ),
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          FlutterQuillLocalizations.delegate,
+        ],
         home: const AppWrapper(title: 'Flutter Demo Home Page'),
       ),
     );
@@ -41,16 +51,17 @@ class AppWrapper extends StatefulWidget {
 }
 
 class _AppWrapperState extends State<AppWrapper> {
-  // type of the widget name needed here
-
   var selectedIndex = 0;
+  List<dynamic> blankData = [
+    {'insert': '\n'},
+  ];
 
   @override
   Widget build(BuildContext context) {
     Widget page;
     switch (selectedIndex) {
       case 0:
-        page = HomePage(entry: Entry("", DateTime(0), []));
+        page = HomePage(entry: Entry(jsonEncode(blankData), DateTime(0), []));
       case 1:
         page = HistoryPage(filter: (m) => !m.isFuture());
       case 2:

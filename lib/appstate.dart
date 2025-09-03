@@ -51,26 +51,10 @@ class Entry {
   }
 }
 
-List<Entry> testEntries = [
-  Entry("pusheen", DateTime.parse("2025-02-27 13:27:00"), ["kitty", "big"]),
-  Entry("stormy", DateTime.parse("2025-02-27 13:27:00"), ["kitty", "medium"]),
-  Entry("pip", DateTime.parse("2025-02-27 13:27:00"), ["kitty", "small"]),
-  Entry("rafael", DateTime.parse("2026-06-23 01:27:00"), ["human", "big"]),
-  Entry("ingrid", DateTime.parse("2025-11-20 10:27:00"), ["human", "medium"]),
-];
-
-List<Tag> testTags = [
-  Tag("kitty", 3),
-  Tag("human", 2),
-  Tag("big", 2),
-  Tag("medium", 2),
-  Tag("small", 1),
-];
-
 class MyAppState extends ChangeNotifier {
   // this will come from  database soon
-  List<Entry> entries = testEntries;
-  List<Tag> allTags = testTags;
+  List<Entry> entries = [];
+  List<Tag> allTags = [];
 
   void saveTags(postTags) {
     for (var tag in postTags) {
@@ -97,8 +81,15 @@ class MyAppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void saveEntry(text, date, tags) {
-    entries.add(Entry(text, date, tags));
+  void saveEntry(id, text, date, tags) {
+    if (entries.where((e) => e.id == id).toList().isNotEmpty) {
+      var editedEntry = entries.where((e) => e.id == id).toList()[0];
+      editedEntry.text = text;
+      editedEntry.date = date;
+      editedEntry.tags = tags;
+    } else {
+      entries.add(Entry(text, date, tags));
+    }
     saveTags(tags);
     notifyListeners();
   }
