@@ -1,13 +1,14 @@
 import 'dart:convert';
 
+import 'package:annoying_notes/models/entry.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_quill/flutter_quill.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 
-import 'package:witchy_diary/appstate.dart';
-import 'package:witchy_diary/datetime_selector.dart';
+import 'package:annoying_notes/appstate.dart';
+import 'package:annoying_notes/datetime_selector.dart';
+import 'package:annoying_notes/reminder_dialog.dart';
 
 class HomePage extends StatefulWidget {
   final Entry entry;
@@ -23,19 +24,17 @@ class _HomePageState extends State<HomePage> {
   final QuillController _noteBodyController = QuillController.basic();
   final TextEditingController _tagsController = TextEditingController();
 
-  //TODO: note editing if entry is provided
-  DateTime selectedDate = DateTime(0);
-  List<String> _tags = [];
-  List<String> _newTags = [];
+  Entry editingEntry = Entry.empty();
+  final List<String> _newTags = [];
 
   @override
   void initState() {
     super.initState();
+
     _noteBodyController.document = Document.fromJson(
       jsonDecode(widget.entry.text),
     );
-    selectedDate = widget.entry.date;
-    _tags = widget.entry.tags;
+    editingEntry = widget.entry;
   }
 
   @override
@@ -47,27 +46,21 @@ class _HomePageState extends State<HomePage> {
 
   void resetState() {
     _tagsController.text = "";
-    setState(() {
-      _noteBodyController.document = Document.fromJson(
-        jsonDecode(widget.entry.text),
-      );
-      selectedDate = widget.entry.date;
-      _tags = widget.entry.tags;
-    });
+    _noteBodyController.document = Document.fromJson(
+      jsonDecode(widget.entry.text),
+    );
+    editingEntry = widget.entry;
   }
 
   void saveState() {
     widget.entry.text = jsonEncode(
       _noteBodyController.document.toDelta().toJson(),
     );
-    widget.entry.date = selectedDate;
-    widget.entry.tags = _tags;
-    _newTags = [];
   }
 
   void _addTag(String tag) {
     setState(() {
-      _tags.add(tag.trim());
+      editingEntry.tags.add(tag.trim());
     });
   }
 
@@ -80,7 +73,7 @@ class _HomePageState extends State<HomePage> {
 
   void _removeTag(String tag) {
     setState(() {
-      _tags.remove(tag);
+      editingEntry.tags.remove(tag);
     });
   }
 
@@ -94,12 +87,8 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     var appState = context.watch<MyAppState>();
 
-    DateTime now = DateTime.now();
-
-    String formattedDate = DateFormat('kk:mm - EEE d MMM').format(now);
-    String formattedSelectedDate = DateFormat(
-      'kk:mm - EEE d MMM',
-    ).format(selectedDate);
+    String formattedDate = DateFormat('EEE d MMM').format(editingEntry.date);
+    String formattedTime = DateFormat('kk:mm').format(editingEntry.date);
 
     return Material(
       child: Center(
@@ -114,42 +103,145 @@ class _HomePageState extends State<HomePage> {
               config: const QuillSimpleToolbarConfig(),
             ),
             Expanded(
-              child: QuillEditor.basic(
-                controller: _noteBodyController,
-                config: const QuillEditorConfig(),
+              child: GridPaper(
+                // Customize grid properties
+                color: Colors.grey, // Color of the grid lines
+                divisions:
+                    1, // Number of major divisions within each primary grid cell
+                interval: 94, // Spacing between primary grid lines
+                child: QuillEditor.basic(
+                  controller: _noteBodyController,
+                  config: const QuillEditorConfig(),
+                ),
               ),
             ),
-            Text(
-              "Date: ${selectedDate == DateTime(0) ? formattedDate : formattedSelectedDate}",
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text("Date:"),
+                InkWell(
+                  onTap: () {
+                    // Handle tap event
+                    datePicker(
+                      context: context,
+                      time: editingEntry.date,
+                      save: (inputDate) =>
+                          setState(() => editingEntry.date = inputDate),
+                    );
+                  },
+                  child: Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Row(
+                        children: [
+                          Icon(Icons.calendar_today),
+                          SizedBox(
+                            width: 4.0,
+                          ), // Adds spacing between icon and text
+                          Text(formattedDate),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                Text("Time:"),
+                InkWell(
+                  onTap: () {
+                    // time needs to know the date to save and vice versa
+                    timePicker(
+                      context: context,
+                      date: editingEntry.date,
+                      save: (inputDate) =>
+                          setState(() => editingEntry.date = inputDate),
+                    );
+                  },
+                  child: Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Row(
+                        children: [
+                          Icon(Icons.timer),
+                          SizedBox(
+                            width: 4.0,
+                          ), // Adds spacing between icon and text
+                          Text(formattedTime),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            ElevatedButton(
-              onPressed: () {
-                showDateTimePicker(
-                  context: context,
-                  save: (inputDate) => setState(() => selectedDate = inputDate),
-                );
-              },
-              child: Text('Select another?'),
-            ),
-            // TODO: reminders and alarm logic
-            // checkbox and spaced repetition
-            if (selectedDate.isAfter(DateTime.now())) ...[
-              Column(
+            // TODO: checkbox and spaced repetition
+            if (editingEntry.date.isAfter(DateTime.now())) ...[
+              Row(
                 children: [
-                  Text("This date is in the future. Set reminder?"),
-                  Text("5 minutes before"),
-                  Text("30 minutes before"),
-                  Text("custom"),
-                  Text("Notification"),
-                  Text("Alarm"),
-                  Text("+ add another"),
+                  InkWell(
+                    onTap: () {
+                      // Handle tap event
+                      showDialog(
+                        context: context,
+                        builder: (context) => Dialog(
+                          insetPadding: EdgeInsets.all(10),
+
+                          child: ReminderDialog(
+                            originalReminders: editingEntry.reminders,
+                            save: (rlist) => {
+                              print(rlist),
+                              setState(() => editingEntry.reminders = rlist),
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                    child: Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(16.0),
+                        child: Column(
+                          children: [
+                            Icon(Icons.alarm_add),
+                            SizedBox(
+                              height: 4.0,
+                            ), // Adds spacing between icon and text
+                            Text('Set up reminder'),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  InkWell(
+                    onTap: () {
+                      // Handle tap event
+                      showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: Text('Title'),
+                          content: Text('Here content'),
+                        ),
+                      );
+                    },
+                    child: Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(16.0),
+                        child: Column(
+                          children: [
+                            Icon(Icons.check_box),
+                            SizedBox(
+                              height: 4.0,
+                            ), // Adds spacing between icon and text
+                            Text('Set up Completion'),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ],
             Column(
               children: [
-                Padding(
-                  padding: const EdgeInsets.all(20),
+                SizedBox(
+                  width: 300,
                   child: TextField(
                     controller: _tagsController,
                     decoration: InputDecoration(
@@ -177,7 +269,7 @@ class _HomePageState extends State<HomePage> {
                       appState.allTags.map((tag) {
                         return FilterChip(
                           label: Text('#${tag.text}'),
-                          selected: _tags.contains(tag.text),
+                          selected: editingEntry.tags.contains(tag.text),
                           onSelected: (bool selected) {
                             setState(() {
                               if (selected) {
@@ -192,7 +284,7 @@ class _HomePageState extends State<HomePage> {
                       _newTags.map((tag) {
                         return FilterChip(
                           label: Text('#$tag'),
-                          selected: _tags.contains(tag),
+                          selected: editingEntry.tags.contains(tag),
                           onSelected: (bool selected) {
                             setState(() {
                               if (!selected) {
@@ -210,41 +302,41 @@ class _HomePageState extends State<HomePage> {
                 ),
               ],
             ),
-            Row(
-              children: <Widget>[
-                ElevatedButton(
-                  onPressed: () {
-                    if (selectedDate != DateTime(0)) {
-                      appState.saveEntry(
-                        widget.entry.id,
-                        jsonEncode(
-                          _noteBodyController.document.toDelta().toJson(),
-                        ),
-                        selectedDate,
-                        _tags,
-                      );
-                    } else {
-                      appState.saveEntry(
-                        widget.entry.id,
-                        jsonEncode(
-                          _noteBodyController.document.toDelta().toJson(),
-                        ),
-                        now,
-                        _tags,
-                      );
-                    }
-                    saveState();
-                  },
-                  child: Text('Save'),
-                ),
-                SizedBox(width: 10),
-                ElevatedButton(
-                  onPressed: () {
-                    resetState();
-                  },
-                  child: Text('Discard'),
-                ),
+            Column(
+              children: [
+                for (var reminder in editingEntry.reminders) ...[
+                  Text("a"),
+                  if (reminder.alarm) ...[Text("Alarm")],
+                  if (reminder.notify) ...[Text("Notify")],
+                  if (reminder.email) ...[Text("Email")],
+                ],
               ],
+            ),
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  ElevatedButton(
+                    onPressed: () {
+                      editingEntry.text = jsonEncode(
+                        _noteBodyController.document.toDelta().toJson(),
+                      );
+                      appState.saveEntry(widget.entry.id, editingEntry);
+
+                      saveState();
+                    },
+                    child: Text('Save'),
+                  ),
+                  SizedBox(width: 10),
+                  ElevatedButton(
+                    onPressed: () {
+                      resetState();
+                    },
+                    child: Text('Discard'),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

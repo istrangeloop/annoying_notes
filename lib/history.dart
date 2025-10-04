@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_quill/flutter_quill.dart';
-import 'package:witchy_diary/appstate.dart';
-import 'package:witchy_diary/home.dart';
+import 'package:annoying_notes/appstate.dart';
+import 'package:annoying_notes/home.dart';
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key, required this.filter});
@@ -16,7 +16,7 @@ class HistoryPage extends StatefulWidget {
 }
 
 class _HistoryPageState extends State<HistoryPage> {
-  List<String> _tagFilters = [];
+  final List<String> _tagFilters = [];
   String keywordSearch = "";
 
   @override
@@ -127,7 +127,7 @@ class _HistoryPageState extends State<HistoryPage> {
               minWidth: 100,
               maxWidth: 200,
               minHeight: 50,
-              maxHeight: 350,
+              maxHeight: 500,
             ),
             margin: EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
             padding: const EdgeInsets.all(12.0),
@@ -192,6 +192,17 @@ class _HistoryPageState extends State<HistoryPage> {
                     );
                   }).toList(),
                 ),
+                if (entry.reminders.isNotEmpty)
+                  for (var reminder in entry.reminders) ...[
+                    Row(
+                      children: [
+                        Text("cabeça dura vai receber >"),
+                        if (reminder.alarm) ...[Icon(Icons.alarm)],
+                        if (reminder.notify) ...[Icon(Icons.note)],
+                        if (reminder.email) ...[Icon(Icons.mail)],
+                      ],
+                    ),
+                  ],
               ],
             ),
           ),

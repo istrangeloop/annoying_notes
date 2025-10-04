@@ -1,14 +1,19 @@
+import 'package:annoying_notes/models/entry.dart';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
-import 'dart:convert';
-
-import 'package:witchy_diary/appstate.dart';
-import 'package:witchy_diary/home.dart';
-import 'package:witchy_diary/history.dart';
+import 'package:hive/hive.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
-void main() {
+import 'package:annoying_notes/appstate.dart';
+import 'package:annoying_notes/home.dart';
+import 'package:annoying_notes/history.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final documentsDir = await getApplicationDocumentsDirectory();
+  Hive.init(documentsDir.path);
   runApp(const MyApp());
 }
 
@@ -52,16 +57,19 @@ class AppWrapper extends StatefulWidget {
 
 class _AppWrapperState extends State<AppWrapper> {
   var selectedIndex = 0;
-  List<dynamic> blankData = [
-    {'insert': '\n'},
-  ];
+  @override
+  void initState() {
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
+    var appState = context.watch<MyAppState>();
+    appState.initData();
     Widget page;
     switch (selectedIndex) {
       case 0:
-        page = HomePage(entry: Entry(jsonEncode(blankData), DateTime(0), []));
+        page = HomePage(entry: Entry.empty());
       case 1:
         page = HistoryPage(filter: (m) => !m.isFuture());
       case 2:
